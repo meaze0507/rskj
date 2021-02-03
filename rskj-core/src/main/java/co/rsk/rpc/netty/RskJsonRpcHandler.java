@@ -63,10 +63,8 @@ public class RskJsonRpcHandler
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBufHolder msg) {
-        try {
-            RskJsonRpcRequest request = serializer.deserializeRequest(
-                    new ByteBufInputStream(msg.copy().content())
-            );
+        try (ByteBufInputStream bis = new ByteBufInputStream(msg.copy().content())) {
+            RskJsonRpcRequest request = serializer.deserializeRequest(bis);
 
             // TODO(mc) we should support the ModuleDescription method filters
             JsonRpcResultOrError resultOrError = request.accept(this, ctx);
