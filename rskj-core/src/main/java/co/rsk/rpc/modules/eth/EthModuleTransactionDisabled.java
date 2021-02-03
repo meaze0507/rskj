@@ -36,7 +36,7 @@ public class EthModuleTransactionDisabled extends EthModuleTransactionBase {
     }
 
     @Override
-    public String sendTransaction(Web3.CallArguments args) {
+    public synchronized String sendTransaction(Web3.CallArguments args) {
         LOGGER.debug("eth_sendTransaction({}): {}", args, null);
         throw invalidParamError("Local wallet is disabled in this node");
     }
