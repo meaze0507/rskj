@@ -73,7 +73,7 @@ public class RemascTransaction extends Transaction {
     }
 
     @Override
-    public synchronized RskAddress getSender() {
+    public RskAddress getSender() {
         return REMASC_ADDRESS;
     }
 

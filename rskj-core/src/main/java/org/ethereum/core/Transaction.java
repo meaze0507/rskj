@@ -371,35 +371,37 @@ public class Transaction {
         return key;
     }
 
-    public synchronized RskAddress getSender() {
-        if (sender != null) {
+    public RskAddress getSender() {
+        synchronized (this) {
+            if (sender != null) {
+                return sender;
+            }
+
+            Metric metric = profiler.start(Profiler.PROFILING_TYPE.KEY_RECOV_FROM_SIG);
+            try {
+                ECKey key = Secp256k1.getInstance().signatureToKey(getRawHash().getBytes(), getSignature());
+                sender = new RskAddress(key.getAddress());
+            } catch (SignatureException e) {
+                logger.error(e.getMessage(), e);
+                panicProcessor.panic("transaction", e.getMessage());
+                sender = RskAddress.nullAddress();
+            } finally {
+                profiler.stop(metric);
+            }
             return sender;
         }
-
-
-        Metric metric = profiler.start(Profiler.PROFILING_TYPE.KEY_RECOV_FROM_SIG);
-        try {
-            ECKey key = Secp256k1.getInstance().signatureToKey(getRawHash().getBytes(), getSignature());
-            sender = new RskAddress(key.getAddress());
-        } catch (SignatureException e) {
-            logger.error(e.getMessage(), e);
-            panicProcessor.panic("transaction", e.getMessage());
-            sender = RskAddress.nullAddress();
-        } finally {
-            profiler.stop(metric);
-        }
-
-        return sender;
     }
 
-    public synchronized RskAddress getSender(SignatureCache signatureCache) {
-        if (sender != null) {
+    public RskAddress getSender(SignatureCache signatureCache) {
+        synchronized (this) {
+            if (sender != null) {
+                return sender;
+            }
+
+            sender = signatureCache.getSender(this);
+
             return sender;
         }
-
-        sender = signatureCache.getSender(this);
-
-        return sender;
     }
 
     public byte getChainId() {
