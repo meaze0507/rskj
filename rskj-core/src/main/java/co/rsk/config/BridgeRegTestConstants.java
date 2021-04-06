@@ -124,7 +124,7 @@ public class BridgeRegTestConstants extends BridgeConstants {
 
         lockingCapIncrementsMultiplier = 2;
 
-        minSecondsBetweenCallsReceiveHeader = 300;  // 5 minutes in Seconds
+        minSecondsBetweenCallsReceiveHeader = 300;  // 5 minutes in seconds
 
         maxDepthBlockchainAccepted = 25;
 
@@ -139,9 +139,9 @@ public class BridgeRegTestConstants extends BridgeConstants {
         );
 
         btcHeightWhenBlockIndexActivates = 10;
-        maxDepthToSearchBlocksBelowIndexActivation = 1_000; //TODO define this value with Sergio
+        maxDepthToSearchBlocksBelowIndexActivation = 5;
 
-        erpFedActivationDelay = 1000;
+        erpFedActivationDelay = 500;
 
         // Keys generated with GenNodeKey using generators 'erp-fed-01' through 'erp-fed-05'
         erpFedPubKeysList = Arrays.stream(new String[]{
