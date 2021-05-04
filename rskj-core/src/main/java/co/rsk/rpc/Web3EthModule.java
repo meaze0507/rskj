@@ -19,6 +19,7 @@
 package co.rsk.rpc;
 
 import co.rsk.rpc.modules.eth.EthModule;
+import co.rsk.rpc.modules.eth.getProof.ProofDTO;
 import org.ethereum.rpc.Web3;
 import org.ethereum.rpc.dto.BlockResultDTO;
 import org.ethereum.rpc.dto.CompilationResultDTO;
@@ -26,6 +27,7 @@ import org.ethereum.rpc.dto.TransactionReceiptDTO;
 import org.ethereum.rpc.dto.TransactionResultDTO;
 
 import java.math.BigInteger;
+import java.util.List;
 import java.util.Map;
 
 public interface Web3EthModule {
@@ -142,4 +144,6 @@ public interface Web3EthModule {
     boolean eth_submitWork(String nonce, String header, String mince);
 
     boolean eth_submitHashrate(String hashrate, String id);
+
+    ProofDTO eth_getProof(String address, List<String> storageKeys, String blockNumber);
 }
