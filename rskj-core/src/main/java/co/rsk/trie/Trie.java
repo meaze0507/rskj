@@ -64,7 +64,7 @@ public class Trie {
     private static final String INVALID_VALUE_LENGTH = "Invalid value length";
 
     // all zeroed, default hash for empty nodes
-    private static Keccak256 emptyHash = makeEmptyHash();
+    private static final Keccak256 EMPTY_HASH = makeEmptyHash();
 
     // this node associated value, if any
     private byte[] value;
@@ -101,11 +101,10 @@ public class Trie {
     private VarInt childrenSize;
 
     // associated store, to store or retrieve nodes in the trie
-    private TrieStore store;
+    private final TrieStore store;
 
     // shared Path
     private final TrieKeySlice sharedPath;
-
 
     // default constructor, no secure
     public Trie() {
@@ -143,13 +142,16 @@ public class Trie {
      * recognize the old serialization format.
      */
     public static Trie fromMessage(byte[] message, TrieStore store) {
-        Trie trie;
         Metric metric = profiler.start(Profiler.PROFILING_TYPE.BUILD_TRIE_FROM_MSG);
+
+        Trie trie;
         if (message[0] == ARITY) {
             trie = fromMessageOrchid(message, store);
         } else {
             trie = fromMessageRskip107(ByteBuffer.wrap(message), store);
         }
+
+        trie.encoded = message;
 
         profiler.stop(metric);
         return trie;
@@ -231,7 +233,6 @@ public class Trie {
             }
         }
 
-        // it doesn't need to clone value since it's retrieved from store or created from message
         return new Trie(store, sharedPath, value, left, right, lvalue, valueHash);
     }
 
@@ -338,18 +339,18 @@ public class Trie {
      */
     public Keccak256 getHash() {
         if (this.hash != null) {
-            return this.hash.copy();
+            return this.hash;
         }
 
         if (isEmptyTrie()) {
-            return emptyHash.copy();
+            return EMPTY_HASH;
         }
 
         byte[] message = this.toMessage();
 
         this.hash = new Keccak256(Keccak256Helper.keccak256(message));
 
-        return this.hash.copy();
+        return this.hash;
     }
 
     /**
@@ -357,18 +358,18 @@ public class Trie {
      */
     public Keccak256 getHashOrchid(boolean isSecure) {
         if (this.hashOrchid != null) {
-            return this.hashOrchid.copy();
+            return this.hashOrchid;
         }
 
         if (isEmptyTrie()) {
-            return emptyHash.copy();
+            return EMPTY_HASH;
         }
 
         byte[] message = this.toMessageOrchid(isSecure);
 
         this.hashOrchid = new Keccak256(Keccak256Helper.keccak256(message));
 
-        return this.hashOrchid.copy();
+        return this.hashOrchid;
     }
 
     /**
@@ -485,7 +486,7 @@ public class Trie {
             internalToMessage();
         }
 
-        return cloneArray(encoded);
+        return encoded;
     }
 
     public int getMessageLength() {
@@ -829,7 +830,7 @@ public class Trie {
             return new Trie(
                     this.store,
                     this.sharedPath,
-                    cloneArray(value),
+                    value,
                     this.left,
                     this.right,
                     getDataLength(value),
@@ -838,7 +839,7 @@ public class Trie {
         }
 
         if (isEmptyTrie()) {
-            return new Trie(this.store, key, cloneArray(value));
+            return new Trie(this.store, key, value);
         }
 
         // this bit will be implicit and not present in a shared path
@@ -946,7 +947,7 @@ public class Trie {
             checkValueLengthAfterRetrieve();
         }
 
-        return cloneArray(value);
+        return value;
     }
 
     /**
@@ -1004,10 +1005,6 @@ public class Trie {
 
     public Iterator<IterationElement> getPreOrderIterator() {
         return new PreOrderIterator(this);
-    }
-
-    private static byte[] cloneArray(byte[] array) {
-        return array == null ? null : Arrays.copyOf(array, array.length);
     }
 
     public Iterator<IterationElement> getPostOrderIterator() {

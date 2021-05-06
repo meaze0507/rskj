@@ -40,11 +40,12 @@ public class TrieStoreImpl implements TrieStore {
 
     private static final Logger logger = LoggerFactory.getLogger("triestore");
 
-    private KeyValueDataSource store;
+    private final KeyValueDataSource store;
 
     /** Weak references are removed once the tries are garbage collected */
-    private Set<Trie> savedTries = Collections
-            .newSetFromMap(Collections.synchronizedMap(new WeakHashMap<>()));
+    private final Set<Trie> savedTries = Collections.synchronizedSet(
+            Collections.newSetFromMap(new WeakHashMap<>())
+    );
 
     public TrieStoreImpl(KeyValueDataSource store) {
         this.store = store;
