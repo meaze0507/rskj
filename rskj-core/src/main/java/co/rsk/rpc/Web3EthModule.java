@@ -47,14 +47,24 @@ public interface Web3EthModule {
         return getEthModule().estimateGas(args);
     }
 
-
-
     default Map<String, Object> eth_bridgeState() throws Exception {
         return getEthModule().bridgeState();
     }
 
     default String eth_chainId() {
         return getEthModule().chainId();
+    }
+
+    default String eth_getCode(String address, String blockId) {
+        return getEthModule().getCode(address, blockId);
+    }
+
+    default String eth_sendRawTransaction(String rawData) {
+        return getEthModule().sendRawTransaction(rawData);
+    }
+
+    default String eth_sendTransaction(Web3.CallArguments args) {
+        return getEthModule().sendTransaction(args);
     }
 
     EthModule getEthModule();
@@ -88,18 +98,6 @@ public interface Web3EthModule {
     String eth_getUncleCountByBlockHash(String blockHash)throws Exception;
 
     String eth_getUncleCountByBlockNumber(String bnOrId)throws Exception;
-
-    default String eth_getCode(String address, String blockId) {
-        return getEthModule().getCode(address, blockId);
-    }
-
-    default String eth_sendRawTransaction(String rawData) {
-        return getEthModule().sendRawTransaction(rawData);
-    }
-
-    default String eth_sendTransaction(Web3.CallArguments args) {
-        return getEthModule().sendTransaction(args);
-    }
 
     BlockResultDTO eth_getBlockByHash(String blockHash, Boolean fullTransactionObjects) throws Exception;
 
@@ -145,5 +143,12 @@ public interface Web3EthModule {
 
     boolean eth_submitHashrate(String hashrate, String id);
 
-    ProofDTO eth_getProof(String address, List<String> storageKeys, String blockNumber);
+    /**
+     * Returns account and storage proofs for a specific address
+     *
+     * @param address an address to get proofs
+     * @param storageKeys storage keys to get storage proofs
+     * @param blockOrId a block number to query the blockchain state (it could also be "latest" or "pending")
+     * */
+    ProofDTO eth_getProof(String address, List<String> storageKeys, String blockOrId);
 }

@@ -20,6 +20,7 @@ package co.rsk.rpc.modules.eth;
 
 import co.rsk.bitcoinj.store.BlockStoreException;
 import co.rsk.config.BridgeConstants;
+import co.rsk.core.Coin;
 import co.rsk.core.ReversibleTransactionExecutor;
 import co.rsk.core.RskAddress;
 import co.rsk.core.bc.AccountInformationProvider;
@@ -29,6 +30,7 @@ import co.rsk.peg.BridgeState;
 import co.rsk.peg.BridgeSupport;
 import co.rsk.peg.BridgeSupportFactory;
 import co.rsk.rpc.ExecutionBlockRetriever;
+import co.rsk.rpc.modules.eth.getProof.ProofDTO;
 import co.rsk.trie.TrieStoreImpl;
 import org.ethereum.core.*;
 import org.ethereum.datasource.HashMapDB;
@@ -44,12 +46,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.util.Arrays.copyOfRange;
-import static org.ethereum.rpc.TypeConverter.stringHexToBigInteger;
-import static org.ethereum.rpc.TypeConverter.toUnformattedJsonHex;
+import static org.ethereum.rpc.TypeConverter.*;
 import static org.ethereum.rpc.exception.RskJsonRpcRequestException.invalidParamError;
 
 // TODO add all RPC methods
@@ -147,7 +149,7 @@ public class EthModule
         String s = null;
         try {
             ProgramResult res = callConstant(args, blockchain.getBestBlock());
-            return s = TypeConverter.toQuantityJsonHex(res.getGasUsed());
+            return s = toQuantityJsonHex(res.getGasUsed());
         } finally {
             LOGGER.debug("eth_estimateGas(): {}", s);
         }
@@ -274,5 +276,20 @@ public class EthModule
                 hexArgs.getData(),
                 hexArgs.getFromAddress()
         );
+    }
+
+    public ProofDTO getProof(String address, List<String> storageKeys, String blockOrId) {
+        RskAddress rskAddress = new RskAddress(address);
+        AccountInformationProvider accountInformationProvider = getAccountInformationProvider(blockOrId);
+
+        String balance = accountInformationProvider.getBalance(rskAddress).toString();
+        String nonce = toQuantityJsonHex(accountInformationProvider.getNonce(rskAddress));
+
+        // EIP-1186: For a simple Account without code it will return "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470" == sha3(empty byte array)
+        String codeHash = accountInformationProvider.isContract(rskAddress) ?
+                toUnformattedJsonHex(accountInformationProvider.getCode(rskAddress)) :
+                "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"; // todo(fedejinich) extract constant
+
+        return new ProofDTO(balance, codeHash, nonce, storageHash, null, null);
     }
 }

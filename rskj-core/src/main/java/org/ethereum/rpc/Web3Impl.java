@@ -1089,7 +1089,7 @@ public class Web3Impl implements Web3 {
     }
 
     @Override
-    public ProofDTO eth_getProof(String address, List<String> storageKeys, String blockNumber) {
-        throw new UnsupportedOperationException("Not implemeted yet");
+    public ProofDTO eth_getProof(String address, List<String> storageKeys, String blockOrId) {
+        return ethModule.getProof(address, storageKeys, blockOrId);
     }
 }
