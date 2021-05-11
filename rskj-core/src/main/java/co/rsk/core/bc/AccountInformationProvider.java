@@ -20,6 +20,7 @@ package co.rsk.core.bc;
 
 import co.rsk.core.Coin;
 import co.rsk.core.RskAddress;
+import co.rsk.crypto.Keccak256;
 import org.ethereum.vm.DataWord;
 
 import javax.annotation.Nullable;
@@ -95,4 +96,12 @@ public interface AccountInformationProvider {
      * @return value of the nonce
      */
     BigInteger getNonce(RskAddress addr);
+
+    /**
+     * Retrieve a Keccak256(of the current storage root) of a given account
+     *
+     * @param addr an address
+     * @return Keccak256(storageRoot)
+     * */
+    Keccak256 getStorageHash(RskAddress addr);
 }

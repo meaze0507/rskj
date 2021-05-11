@@ -180,6 +180,11 @@ public class Storage implements Repository, ProgramListenerAware {
     }
 
     @Override
+    public Keccak256 getStorageHash(RskAddress addr) {
+        return repository.getStorageHash(addr);
+    }
+
+    @Override
     public Coin getBalance(RskAddress addr) {
         return repository.getBalance(addr);
     }

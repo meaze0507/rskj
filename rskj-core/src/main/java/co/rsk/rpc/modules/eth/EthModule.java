@@ -284,6 +284,7 @@ public class EthModule
 
         String balance = accountInformationProvider.getBalance(rskAddress).toString();
         String nonce = toQuantityJsonHex(accountInformationProvider.getNonce(rskAddress));
+        String storageHash = accountInformationProvider.getStorageHash(rskAddress).toHexString();
 
         // EIP-1186: For a simple Account without code it will return "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470" == sha3(empty byte array)
         String codeHash = accountInformationProvider.isContract(rskAddress) ?

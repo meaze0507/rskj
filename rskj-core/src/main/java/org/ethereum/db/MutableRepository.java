@@ -36,6 +36,7 @@ import org.ethereum.crypto.Keccak256Helper;
 import org.ethereum.vm.DataWord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.Nonnull;
 import java.math.BigInteger;
@@ -136,7 +137,6 @@ public class MutableRepository implements Repository {
 
         return account.getNonce();
     }
-
     @Override
     public synchronized void saveCode(RskAddress addr, byte[] code) {
         byte[] key = trieKeyMapper.getCodeKey(addr);
@@ -345,6 +345,12 @@ public class MutableRepository implements Repository {
     public synchronized void updateAccountState(RskAddress addr, final AccountState accountState) {
         byte[] accountKey = trieKeyMapper.getAccountKey(addr);
         mutableTrie.put(accountKey, accountState.getEncoded());
+    }
+
+    @Override
+    public Keccak256 getStorageHash(RskAddress addr) {
+        byte[] storageRoot = getStorageStateRoot(addr);
+        return new Keccak256(storageRoot);
     }
 
     @VisibleForTesting
