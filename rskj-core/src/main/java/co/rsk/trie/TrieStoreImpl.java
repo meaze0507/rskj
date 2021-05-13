@@ -18,6 +18,7 @@
 
 package co.rsk.trie;
 
+import co.rsk.crypto.Keccak256;
 import org.ethereum.datasource.KeyValueDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,7 @@ public class TrieStoreImpl implements TrieStore {
     private final KeyValueDataSource store;
 
     /** Weak references are removed once the tries are garbage collected */
-    private final Set<Trie> savedTries = Collections.synchronizedSet(
+    private final Set<Keccak256> savedTries = Collections.synchronizedSet(
             Collections.newSetFromMap(new WeakHashMap<>())
     );
 
@@ -66,12 +67,15 @@ public class TrieStoreImpl implements TrieStore {
      */
     private void save(Trie trie, boolean forceSaveRoot, int level) {
         logger.trace("Start saving trie, level : {}", level);
-        if (savedTries.contains(trie)) {
+
+        Keccak256 trieHash = trie.getHash();
+
+        if (savedTries.contains(trieHash)) {
             // it is guaranteed that the children of a saved node are also saved
             return;
         }
 
-        byte[] trieKeyBytes = trie.getHash().getBytes();
+        byte[] trieKeyBytes = trieHash.getBytes();
 
         if (forceSaveRoot && this.store.get(trieKeyBytes) != null) {
             // the full trie is already saved
@@ -107,7 +111,7 @@ public class TrieStoreImpl implements TrieStore {
         logger.trace("Putting in store trie root.");
         this.store.put(trieKeyBytes, trie.toMessage());
         logger.trace("End putting in store trie root.");
-        savedTries.add(trie);
+        savedTries.add(trieHash);
         logger.trace("End Saving trie, level: {}.", level);
     }
 
@@ -124,7 +128,7 @@ public class TrieStoreImpl implements TrieStore {
         }
 
         Trie trie = Trie.fromMessage(message, this);
-        savedTries.add(trie);
+        savedTries.add(new Keccak256(hash));
         return Optional.of(trie);
     }
 
