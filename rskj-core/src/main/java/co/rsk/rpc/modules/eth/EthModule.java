@@ -290,7 +290,8 @@ public class EthModule
         String codeHash = accountInformationProvider.isContract(rskAddress) ?
                 toUnformattedJsonHex(accountInformationProvider.getCode(rskAddress)) :
                 "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"; // todo(fedejinich) extract constant
+        List<String> accountProof = accountInformationProvider.getAccountProof(rskAddress);
 
-        return new ProofDTO(balance, codeHash, nonce, storageHash, null, null);
+        return new ProofDTO(balance, codeHash, nonce, storageHash, accountProof, null);
     }
 }

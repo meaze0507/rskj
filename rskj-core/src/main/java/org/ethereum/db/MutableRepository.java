@@ -33,14 +33,16 @@ import org.ethereum.core.AccountState;
 import org.ethereum.core.Repository;
 import org.ethereum.crypto.HashUtil;
 import org.ethereum.crypto.Keccak256Helper;
+import org.ethereum.util.ByteUtil;
+import org.ethereum.util.RLP;
 import org.ethereum.vm.DataWord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.Nonnull;
 import java.math.BigInteger;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MutableRepository implements Repository {
     private static final Logger logger = LoggerFactory.getLogger("repository");
@@ -351,6 +353,24 @@ public class MutableRepository implements Repository {
     public Keccak256 getStorageHash(RskAddress addr) {
         byte[] storageRoot = getStorageStateRoot(addr);
         return new Keccak256(storageRoot);
+    }
+
+    @Override
+    public List<String> getAccountProof(RskAddress addr) {
+        byte[] accountKey = trieKeyMapper.getAccountKey(addr);
+
+        List<String> accountKeys = mutableTrie
+                .getNodes(accountKey)
+                .stream()
+                .map(this::toAccountProof)
+                .collect(Collectors.toList());
+
+        return accountKeys;
+    }
+
+    private String toAccountProof(Trie trie) {
+        byte[] rlpEncodedNode = RLP.encodeElement(trie.toMessage());
+        return ByteUtil.toHexString(rlpEncodedNode);
     }
 
     @VisibleForTesting

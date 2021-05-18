@@ -106,6 +106,11 @@ public class PendingState implements AccountInformationProvider {
         return postExecutionReturn(executedRepository -> executedRepository.getStorageHash(addr));
     }
 
+    @Override
+    public List<String> getAccountProof(RskAddress addr) {
+        return postExecutionReturn(executedRepository -> executedRepository.getAccountProof(addr));
+    }
+
     // sortByPriceTakingIntoAccountSenderAndNonce sorts the transactions by price, but
     // first clustering by sender and then each cluster is order by nonce.
     //
