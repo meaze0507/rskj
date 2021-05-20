@@ -21,6 +21,7 @@ package co.rsk.core.bc;
 import co.rsk.core.Coin;
 import co.rsk.core.RskAddress;
 import co.rsk.crypto.Keccak256;
+import co.rsk.rpc.modules.eth.getProof.StorageProof;
 import org.ethereum.vm.DataWord;
 
 import javax.annotation.Nullable;
@@ -118,4 +119,6 @@ public interface AccountInformationProvider {
      * @return a list of proofs for a given account
      * */
     List<String> getAccountProof(RskAddress addr);
+
+    List<StorageProof> getStorageProof(RskAddress addr, List<DataWord> storageKeys);
 }

@@ -2,11 +2,17 @@ package co.rsk.rpc.modules.eth.getProof;
 
 import java.util.List;
 
-public class StorageProofDTO {
+public class StorageProof {
 
     private String key;
     private String value;
     private List<String> proofs;
+
+    public StorageProof(String key, String value, List<String> proofs) {
+        this.key = key;
+        this.value = value;
+        this.proofs = proofs;
+    }
 
     public String getKey() {
         return key;

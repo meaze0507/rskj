@@ -20,17 +20,18 @@ package co.rsk.rpc.modules.eth;
 
 import co.rsk.bitcoinj.store.BlockStoreException;
 import co.rsk.config.BridgeConstants;
-import co.rsk.core.Coin;
 import co.rsk.core.ReversibleTransactionExecutor;
 import co.rsk.core.RskAddress;
 import co.rsk.core.bc.AccountInformationProvider;
 import co.rsk.core.bc.BlockResult;
+import co.rsk.crypto.Keccak256;
 import co.rsk.db.RepositoryLocator;
 import co.rsk.peg.BridgeState;
 import co.rsk.peg.BridgeSupport;
 import co.rsk.peg.BridgeSupportFactory;
 import co.rsk.rpc.ExecutionBlockRetriever;
 import co.rsk.rpc.modules.eth.getProof.ProofDTO;
+import co.rsk.rpc.modules.eth.getProof.StorageProof;
 import co.rsk.trie.TrieStoreImpl;
 import org.ethereum.core.*;
 import org.ethereum.datasource.HashMapDB;
@@ -39,6 +40,7 @@ import org.ethereum.rpc.TypeConverter;
 import org.ethereum.rpc.Web3;
 import org.ethereum.rpc.converters.CallArgumentsToByteArray;
 import org.ethereum.rpc.exception.RskJsonRpcRequestException;
+import org.ethereum.vm.DataWord;
 import org.ethereum.vm.PrecompiledContracts;
 import org.ethereum.vm.program.ProgramResult;
 import org.slf4j.Logger;
@@ -49,6 +51,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.copyOfRange;
 import static org.ethereum.rpc.TypeConverter.*;
@@ -280,18 +283,24 @@ public class EthModule
 
     public ProofDTO getProof(String address, List<String> storageKeys, String blockOrId) {
         RskAddress rskAddress = new RskAddress(address);
+        List<DataWord> storageKeysDw = storageKeys
+                .stream()
+                .map(key -> DataWord.fromLongString(key))
+                .collect(Collectors.toList());
         AccountInformationProvider accountInformationProvider = getAccountInformationProvider(blockOrId);
 
         String balance = accountInformationProvider.getBalance(rskAddress).toString();
         String nonce = toQuantityJsonHex(accountInformationProvider.getNonce(rskAddress));
         String storageHash = accountInformationProvider.getStorageHash(rskAddress).toHexString();
 
-        // EIP-1186: For a simple Account without code it will return "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470" == sha3(empty byte array)
+        // EIP-1186: For a simple Account (without associated code) it will return a SHA3(empty byte array)
         String codeHash = accountInformationProvider.isContract(rskAddress) ?
                 toUnformattedJsonHex(accountInformationProvider.getCode(rskAddress)) :
-                "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"; // todo(fedejinich) extract constant
-        List<String> accountProof = accountInformationProvider.getAccountProof(rskAddress);
+                toUnformattedJsonHex(Keccak256.ZERO_HASH.getBytes());
 
-        return new ProofDTO(balance, codeHash, nonce, storageHash, accountProof, null);
+        List<String> accountProof = accountInformationProvider.getAccountProof(rskAddress);
+        List<StorageProof> storageProof = accountInformationProvider.getStorageProof(rskAddress, storageKeysDw);
+
+        return new ProofDTO(balance, codeHash, nonce, storageHash, accountProof, storageProof);
     }
 }

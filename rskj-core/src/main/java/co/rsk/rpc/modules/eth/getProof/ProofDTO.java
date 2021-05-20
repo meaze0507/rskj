@@ -9,9 +9,9 @@ public class ProofDTO {
     private String nonce;
     private String storageHash;
     private List<String> accountProof;
-    private List<StorageProofDTO> storageProof;
+    private List<StorageProof> storageProof;
 
-    public ProofDTO(String balance, String codeHash, String nonce, String storageHash, List<String> accountProof, List<StorageProofDTO> storageProof) {
+    public ProofDTO(String balance, String codeHash, String nonce, String storageHash, List<String> accountProof, List<StorageProof> storageProof) {
         this.balance = balance;
         this.codeHash = codeHash;
         this.nonce = nonce;
@@ -60,11 +60,11 @@ public class ProofDTO {
         this.accountProof = accountProof;
     }
 
-    public List<StorageProofDTO> getStorageProof() {
+    public List<StorageProof> getStorageProof() {
         return storageProof;
     }
 
-    public void setStorageProof(List<StorageProofDTO> storageProof) {
+    public void setStorageProof(List<StorageProof> storageProof) {
         this.storageProof = storageProof;
     }
 }
