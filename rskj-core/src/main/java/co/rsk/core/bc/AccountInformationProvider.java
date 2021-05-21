@@ -107,8 +107,6 @@ public interface AccountInformationProvider {
     Keccak256 getStorageHash(RskAddress addr);
 
     /**
-     * According to the EIP-1186 https://eips.ethereum.org/EIPS/eip-1186
-     *
      * Retrieves an account proof for a given address
      * An account proof represents all the nodes starting from the state root following the path by the given the address.
      * Each node is serialized and RLP encoded.
@@ -119,8 +117,6 @@ public interface AccountInformationProvider {
     List<byte[]> getAccountProof(RskAddress addr);
 
     /**
-     * According to the EIP-1186 https://eips.ethereum.org/EIPS/eip-1186
-     *
      * Retrieves an account proof for a given address
      * An account proof represents all the nodes starting from the state root following the path by the given the address.
      * Each node is serialized and RLP encoded.
