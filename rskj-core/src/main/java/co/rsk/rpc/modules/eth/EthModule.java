@@ -30,7 +30,7 @@ import co.rsk.peg.BridgeState;
 import co.rsk.peg.BridgeSupport;
 import co.rsk.peg.BridgeSupportFactory;
 import co.rsk.rpc.ExecutionBlockRetriever;
-import co.rsk.rpc.modules.eth.getProof.ProofDTO;
+import co.rsk.rpc.modules.eth.getProof.Proof;
 import co.rsk.rpc.modules.eth.getProof.StorageProof;
 import co.rsk.trie.TrieStoreImpl;
 import org.ethereum.core.*;
@@ -46,6 +46,7 @@ import org.ethereum.vm.program.ProgramResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -281,12 +282,17 @@ public class EthModule
         );
     }
 
-    public ProofDTO getProof(String address, List<String> storageKeys, String blockOrId) {
+    /**
+     *  Given a blockId, it generates account and storage proofs for specific address and storage values
+     *  NOTE: It also formats them to match JSON RPC specs
+     *
+     * @param address an RSK address
+     * @param storageKeys storage keys that we want to prove
+     * @param blockOrId a block id
+     * @return an account and storage proof
+     * */
+    public Proof getProof(String address, List<String> storageKeys, String blockOrId) {
         RskAddress rskAddress = new RskAddress(address);
-        List<DataWord> storageKeysDw = storageKeys
-                .stream()
-                .map(key -> DataWord.fromLongString(key))
-                .collect(Collectors.toList());
         AccountInformationProvider accountInformationProvider = getAccountInformationProvider(blockOrId);
 
         String balance = accountInformationProvider.getBalance(rskAddress).toString();
@@ -298,9 +304,23 @@ public class EthModule
                 toUnformattedJsonHex(accountInformationProvider.getCode(rskAddress)) :
                 toUnformattedJsonHex(Keccak256.ZERO_HASH.getBytes());
 
-        List<String> accountProof = accountInformationProvider.getAccountProof(rskAddress);
-        List<StorageProof> storageProof = accountInformationProvider.getStorageProof(rskAddress, storageKeysDw);
+        List<String> accountProof = accountInformationProvider.getAccountProof(rskAddress).stream()
+                .map(proof -> toUnformattedJsonHex(proof))
+                .collect(Collectors.toList());
 
-        return new ProofDTO(balance, codeHash, nonce, storageHash, accountProof, storageProof);
+        List<StorageProof> storageProof = storageKeys.stream()
+                .map(storageKey -> getStorageProof(rskAddress, DataWord.fromLongString(storageKey), accountInformationProvider))
+                .collect(Collectors.toList());
+
+        return new Proof(balance, codeHash, nonce, storageHash, accountProof, storageProof);
+    }
+
+    public StorageProof getStorageProof(RskAddress rskAddress, DataWord storageKey, AccountInformationProvider accountInformationProvider) {
+        List<String> storageProof = accountInformationProvider.getStorageProof(rskAddress, storageKey).stream()
+                .map(proof -> toUnformattedJsonHex(proof))
+                .collect(Collectors.toList());
+        DataWord value = accountInformationProvider.getStorageValue(rskAddress, storageKey);
+
+        return new StorageProof(storageKey.toString(), value.toString(), storageProof);
     }
 }

@@ -108,12 +108,12 @@ public class PendingState implements AccountInformationProvider {
     }
 
     @Override
-    public List<String> getAccountProof(RskAddress addr) {
+    public List<byte[]> getAccountProof(RskAddress addr) {
         return postExecutionReturn(executedRepository -> executedRepository.getAccountProof(addr));
     }
 
     @Override
-    public List<StorageProof> getStorageProof(RskAddress addr, List<DataWord> storageKeys) {
+    public List<byte[]> getStorageProof(RskAddress addr, DataWord storageKeys) {
         return postExecutionReturn(executedRepository -> executedRepository.getStorageProof(addr, storageKeys));
     }
 
