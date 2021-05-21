@@ -111,13 +111,22 @@ public interface AccountInformationProvider {
      *
      * Retrieves an account proof for a given address
      * An account proof represents all the nodes starting from the state root following the path by the given the address.
-     * Each node is RLP encoded.
-     * NOTE: the value is also included at the end of the list
+     * Each node is serialized and RLP encoded.
      *
      * @param addr an address
-     * @return a list of proofs for a given account
+     * @return a list of account proofs for a given address
      * */
     List<byte[]> getAccountProof(RskAddress addr);
 
-    List<byte[]> getStorageProof(RskAddress addr, DataWord storageKeys);
+    /**
+     * According to the EIP-1186 https://eips.ethereum.org/EIPS/eip-1186
+     *
+     * Retrieves an account proof for a given address
+     * An account proof represents all the nodes starting from the state root following the path by the given the address.
+     * Each node is serialized and RLP encoded.
+     *
+     * @param addr an address
+     * @return a list of storage proofs for a given address and storage key
+     * */
+    List<byte[]> getStorageProof(RskAddress addr, DataWord storageKey);
 }

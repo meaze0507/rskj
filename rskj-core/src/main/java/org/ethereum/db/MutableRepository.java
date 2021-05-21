@@ -355,7 +355,7 @@ public class MutableRepository implements Repository {
 
     /**
      * Generates a proof for a specific key.
-     * This implies retrieving all the nodes that are included in the key path to the value
+     * Retrieves all the nodes starting from the state root, following the key path to the value
      *
      * @return a byte array of RLP-serialized nodes
      * */

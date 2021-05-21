@@ -113,8 +113,8 @@ public class PendingState implements AccountInformationProvider {
     }
 
     @Override
-    public List<byte[]> getStorageProof(RskAddress addr, DataWord storageKeys) {
-        return postExecutionReturn(executedRepository -> executedRepository.getStorageProof(addr, storageKeys));
+    public List<byte[]> getStorageProof(RskAddress addr, DataWord storageKey) {
+        return postExecutionReturn(executedRepository -> executedRepository.getStorageProof(addr, storageKey));
     }
 
     // sortByPriceTakingIntoAccountSenderAndNonce sorts the transactions by price, but

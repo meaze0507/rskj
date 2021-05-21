@@ -289,7 +289,7 @@ public class EthModule
      * @param address an RSK address
      * @param storageKeys storage keys that we want to prove
      * @param blockOrId a block id
-     * @return an account and storage proof
+     * @return account and storage proofs
      * */
     public Proof getProof(String address, List<String> storageKeys, String blockOrId) {
         RskAddress rskAddress = new RskAddress(address);
@@ -299,7 +299,7 @@ public class EthModule
         String nonce = toQuantityJsonHex(accountInformationProvider.getNonce(rskAddress));
         String storageHash = accountInformationProvider.getStorageHash(rskAddress).toHexString();
 
-        // EIP-1186: For a simple Account (without associated code) it will return a SHA3(empty byte array)
+        // EIP-1186: For an externally owned account (without associated code) it will return a SHA3(empty byte array)
         String codeHash = accountInformationProvider.isContract(rskAddress) ?
                 toUnformattedJsonHex(accountInformationProvider.getCode(rskAddress)) :
                 toUnformattedJsonHex(Keccak256.ZERO_HASH.getBytes());
@@ -315,6 +315,14 @@ public class EthModule
         return new Proof(balance, codeHash, nonce, storageHash, accountProof, storageProof);
     }
 
+    /**
+     * Retrieves a storage proof for a given (address,storageKey) and storage value, then adapts it to return a StorageProof object.
+     *
+     * @param rskAddress an rsk address
+     * @param storageKey a storage key
+     * @param accountInformationProvider an account information provider to retrieve data from the expected block
+     * @return a StorageProof object containing key, value and storage proofs
+     * */
     public StorageProof getStorageProof(RskAddress rskAddress, DataWord storageKey, AccountInformationProvider accountInformationProvider) {
         List<String> storageProof = accountInformationProvider.getStorageProof(rskAddress, storageKey).stream()
                 .map(proof -> toUnformattedJsonHex(proof))
