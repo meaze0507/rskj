@@ -2,16 +2,16 @@ package co.rsk.rpc.modules.eth.getProof;
 
 import java.util.List;
 
-public class Proof {
+public class ProofDTO {
 
     private String balance;
     private String codeHash;
     private String nonce;
     private String storageHash;
     private List<String> accountProof;
-    private List<StorageProof> storageProof;
+    private List<StorageProofDTO> storageProof;
 
-    public Proof(String balance, String codeHash, String nonce, String storageHash, List<String> accountProof, List<StorageProof> storageProof) {
+    public ProofDTO(String balance, String codeHash, String nonce, String storageHash, List<String> accountProof, List<StorageProofDTO> storageProof) {
         this.balance = balance;
         this.codeHash = codeHash;
         this.nonce = nonce;
@@ -60,11 +60,11 @@ public class Proof {
         this.accountProof = accountProof;
     }
 
-    public List<StorageProof> getStorageProof() {
+    public List<StorageProofDTO> getStorageProof() {
         return storageProof;
     }
 
-    public void setStorageProof(List<StorageProof> storageProof) {
+    public void setStorageProof(List<StorageProofDTO> storageProof) {
         this.storageProof = storageProof;
     }
 }

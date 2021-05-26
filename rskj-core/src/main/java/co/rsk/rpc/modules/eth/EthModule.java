@@ -30,8 +30,8 @@ import co.rsk.peg.BridgeState;
 import co.rsk.peg.BridgeSupport;
 import co.rsk.peg.BridgeSupportFactory;
 import co.rsk.rpc.ExecutionBlockRetriever;
-import co.rsk.rpc.modules.eth.getProof.Proof;
-import co.rsk.rpc.modules.eth.getProof.StorageProof;
+import co.rsk.rpc.modules.eth.getProof.ProofDTO;
+import co.rsk.rpc.modules.eth.getProof.StorageProofDTO;
 import co.rsk.trie.TrieStoreImpl;
 import org.ethereum.core.*;
 import org.ethereum.datasource.HashMapDB;
@@ -46,7 +46,6 @@ import org.ethereum.vm.program.ProgramResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -291,7 +290,7 @@ public class EthModule
      * @param blockOrId a block id
      * @return account and storage proofs
      * */
-    public Proof getProof(String address, List<String> storageKeys, String blockOrId) {
+    public ProofDTO getProof(String address, List<String> storageKeys, String blockOrId) {
         RskAddress rskAddress = new RskAddress(address);
         AccountInformationProvider accountInformationProvider = getAccountInformationProvider(blockOrId);
 
@@ -308,11 +307,11 @@ public class EthModule
                 .map(proof -> toUnformattedJsonHex(proof))
                 .collect(Collectors.toList());
 
-        List<StorageProof> storageProof = storageKeys.stream()
+        List<StorageProofDTO> storageProof = storageKeys.stream()
                 .map(storageKey -> getStorageProof(rskAddress, DataWord.fromLongString(storageKey), accountInformationProvider))
                 .collect(Collectors.toList());
 
-        return new Proof(balance, codeHash, nonce, storageHash, accountProof, storageProof);
+        return new ProofDTO(balance, codeHash, nonce, storageHash, accountProof, storageProof);
     }
 
     /**
@@ -323,12 +322,12 @@ public class EthModule
      * @param accountInformationProvider an account information provider to retrieve data from the expected block
      * @return a StorageProof object containing key, value and storage proofs
      * */
-    public StorageProof getStorageProof(RskAddress rskAddress, DataWord storageKey, AccountInformationProvider accountInformationProvider) {
+    public StorageProofDTO getStorageProof(RskAddress rskAddress, DataWord storageKey, AccountInformationProvider accountInformationProvider) {
         List<String> storageProof = accountInformationProvider.getStorageProof(rskAddress, storageKey).stream()
                 .map(proof -> toUnformattedJsonHex(proof))
                 .collect(Collectors.toList());
         DataWord value = accountInformationProvider.getStorageValue(rskAddress, storageKey);
 
-        return new StorageProof(storageKey.toString(), value.toString(), storageProof);
+        return new StorageProofDTO(storageKey.toString(), value.toString(), storageProof);
     }
 }
