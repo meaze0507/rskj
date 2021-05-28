@@ -60,15 +60,6 @@ public class ProgramResult {
      */
     private List<CallCreate> callCreateList;
 
-    public boolean getCallWithValuePerformed() {
-        return callWithValuePerformed;
-    }
-
-    public void markCallWithValuePerformed() {
-        callWithValuePerformed =true;
-    }
-
-
     public void clearUsedGas() {
         gasUsed = 0;
     }
@@ -279,5 +270,9 @@ public class ProgramResult {
         ProgramResult result = new ProgramResult();
         result.setHReturn(EMPTY_BYTE_ARRAY);
         return result;
+    }
+
+    public void setGasUsed(long gasUsed) {
+        this.gasUsed = gasUsed;
     }
 }

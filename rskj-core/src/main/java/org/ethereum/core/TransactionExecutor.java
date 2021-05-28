@@ -150,7 +150,7 @@ public class TransactionExecutor {
      * will be ready to run the transaction at the end
      * set readyToExecute = true
      */
-    private boolean init() {
+    public boolean init() {
         basicTxCost = tx.transactionCost(constants, activations);
 
         if (localCall) {
@@ -266,7 +266,7 @@ public class TransactionExecutor {
         return true;
     }
 
-    private void execute() {
+    public void execute() {
         logger.trace("Execute transaction {} {}", toBI(tx.getNonce()), tx.getHash());
 
         if (!localCall) {
@@ -406,7 +406,7 @@ public class TransactionExecutor {
         executionError = err;
     }
 
-    private void go() {
+    public void go() {
         // TODO: transaction call for pre-compiled  contracts
         if (vm == null) {
             cacheTrack.commit();
@@ -492,8 +492,11 @@ public class TransactionExecutor {
         return receipt;
     }
 
+    public boolean getCallWithValuePerformed() {
+        return program.getCallWithValuePerformed();
+    }
 
-    private void finalization() {
+    public void finalization() {
         // RSK if local call gas balances must not be changed
         if (localCall) {
             // This should change in the future.
@@ -502,9 +505,6 @@ public class TransactionExecutor {
             // Now it will have invalid deletedAccounts data.
             // It's better that in this case the track used is a cache that does not
             // allow flush, so that guarantees no side effects.
-
-            // Informing the CallWithValue is required for gas estimation
-            informOfCallWithValuePerformed();
             return;
         }
 
@@ -531,9 +531,6 @@ public class TransactionExecutor {
         // The actual gas subtracted is equal to half of the future refund
         long gasRefund = Math.min(result.getFutureRefund(), result.getGasUsed() / 2);
         result.addDeductedRefund(gasRefund);
-
-        informOfCallWithValuePerformed();
-
         mEndGas = activations.isActive(ConsensusRule.RSKIP136) ?
                 GasCost.add(mEndGas, gasRefund) :
                 mEndGas + gasRefund;
@@ -579,12 +576,6 @@ public class TransactionExecutor {
         logger.trace("tx listener done");
 
         logger.trace("tx finalization done");
-    }
-
-    public void informOfCallWithValuePerformed() {
-        if ((program != null) && (program.getCallWithValuePerformed())) {
-            result.markCallWithValuePerformed();
-        }
     }
 
 

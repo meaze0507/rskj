@@ -40,6 +40,7 @@ import org.ethereum.rpc.exception.RskJsonRpcRequestException;
 import org.ethereum.vm.GasCost;
 import org.ethereum.vm.PrecompiledContracts;
 import org.ethereum.vm.program.ProgramResult;
+import org.ethereum.vm.program.ProgramResultCallWithValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,7 +148,7 @@ public class EthModule
     public String estimateGas(Web3.CallArguments args) {
         String s = null;
         try {
-            ProgramResult res = callConstant(args, blockchain.getBestBlock());
+            ProgramResult res = callConstantGasExactimation(args, blockchain.getBestBlock());
 
             // IMPORTANT: currently, due to localCall=true argument,
             // res.getDeductedRefund() will always return zero. This is ok.
@@ -159,10 +160,6 @@ public class EthModule
             // in these operations unless the user provides a malicius gasLimit value.
             long gasUsed = res.getGasUsed();
             long gasNeeded = gasUsed + res.getDeductedRefund();
-
-            if (res.getCallWithValuePerformed()) {
-                gasNeeded += GasCost.STIPEND_CALL;
-            }
             s = TypeConverter.toQuantityJsonHex(gasNeeded);
             return s;
         } finally {
@@ -239,6 +236,20 @@ public class EthModule
                     throw invalidParamError("invalid blocknumber " + id);
                 }
         }
+    }
+
+    private ProgramResult callConstantGasExactimation(Web3.CallArguments args, Block executionBlock) {
+        CallArgumentsToByteArray hexArgs = new CallArgumentsToByteArray(args);
+        return reversibleTransactionExecutor.executeTransactionGasExactimation(
+                executionBlock,
+                executionBlock.getCoinbase(),
+                hexArgs.getGasPrice(),
+                hexArgs.getGasLimit(),
+                hexArgs.getToAddress(),
+                hexArgs.getValue(),
+                hexArgs.getData(),
+                hexArgs.getFromAddress()
+        );
     }
 
     private ProgramResult callConstant(Web3.CallArguments args, Block executionBlock) {

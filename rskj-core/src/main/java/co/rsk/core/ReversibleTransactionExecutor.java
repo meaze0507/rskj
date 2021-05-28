@@ -25,7 +25,9 @@ import org.ethereum.core.Block;
 import org.ethereum.core.Repository;
 import org.ethereum.core.Transaction;
 import org.ethereum.core.TransactionExecutor;
+import org.ethereum.vm.program.Program;
 import org.ethereum.vm.program.ProgramResult;
+import org.ethereum.vm.program.ProgramResultCallWithValue;
 
 /**
  * Encapsulates the logic to execute a transaction in an
@@ -40,6 +42,28 @@ public class ReversibleTransactionExecutor {
             TransactionExecutorFactory transactionExecutorFactory) {
         this.repositoryLocator = repositoryLocator;
         this.transactionExecutorFactory = transactionExecutorFactory;
+    }
+
+    public ProgramResult executeTransactionGasExactimation(
+            Block executionBlock,
+            RskAddress coinbase,
+            byte[] gasPrice,
+            byte[] gasLimit,
+            byte[] toAddress,
+            byte[] value,
+            byte[] data,
+            RskAddress fromAddress) {
+        return this.executeTransaction_gasExactimation(
+                repositoryLocator.snapshotAt(executionBlock.getHeader()),
+                executionBlock,
+                coinbase,
+                gasPrice,
+                gasLimit,
+                toAddress,
+                value,
+                data,
+                fromAddress
+        );
     }
 
     public ProgramResult executeTransaction(
@@ -64,6 +88,21 @@ public class ReversibleTransactionExecutor {
         );
     }
 
+    public ProgramResult executeTransaction_gasExactimation(
+            RepositorySnapshot snapshot,
+            Block executionBlock,
+            RskAddress coinbase,
+            byte[] gasPrice,
+            byte[] gasLimit,
+            byte[] toAddress,
+            byte[] value,
+            byte[] data,
+            RskAddress fromAddress) {
+        TransactionExecutor executor = reversibleExecution(snapshot, executionBlock, coinbase, gasPrice, gasLimit, toAddress, value, data, fromAddress);
+
+        return  executor.getCallWithValuePerformed() ? new ProgramResultCallWithValue(executor.getResult()) : executor.getResult();
+    }
+
     @Deprecated
     public ProgramResult executeTransaction_workaround(
             RepositorySnapshot snapshot,
@@ -75,6 +114,10 @@ public class ReversibleTransactionExecutor {
             byte[] value,
             byte[] data,
             RskAddress fromAddress) {
+        return reversibleExecution(snapshot, executionBlock, coinbase, gasPrice, gasLimit, toAddress, value, data, fromAddress).getResult();
+    }
+
+    private TransactionExecutor reversibleExecution(RepositorySnapshot snapshot, Block executionBlock, RskAddress coinbase, byte[] gasPrice, byte[] gasLimit, byte[] toAddress, byte[] value, byte[] data, RskAddress fromAddress) {
         Repository track = snapshot.startTracking();
 
         byte[] nonce = track.getNonce(fromAddress).toByteArray();
@@ -92,9 +135,11 @@ public class ReversibleTransactionExecutor {
                 .newInstance(tx, 0, coinbase, track, executionBlock, 0)
                 .setLocalCall(true);
 
-        executor.executeTransaction();
-
-        return executor.getResult();
+        executor.init();
+        executor.execute();
+        executor.go();
+        executor.finalization();
+        return executor;
     }
 
     private static class UnsignedTransaction extends Transaction {

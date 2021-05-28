@@ -35,6 +35,7 @@ import org.ethereum.rpc.Web3;
 import org.ethereum.rpc.Web3Impl;
 import org.ethereum.rpc.exception.RskJsonRpcRequestException;
 import org.ethereum.vm.program.ProgramResult;
+import org.ethereum.vm.program.ProgramResultCallWithValue;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -239,11 +240,13 @@ public class EthModuleTest {
         doReturn(coinbase).when(block).getCoinbase();
 
         ReversibleTransactionExecutor executor = mock(ReversibleTransactionExecutor.class);
+
         ProgramResult programResult = new ProgramResult();
         programResult.addDeductedRefund(10000);
         programResult.spendGas(30000);
-        programResult.markCallWithValuePerformed();
-        doReturn(programResult).when(executor).executeTransaction(any(),any(),
+
+        ProgramResultCallWithValue programResultCallWithValue = new ProgramResultCallWithValue(programResult);
+        doReturn(programResultCallWithValue).when(executor).executeTransactionGasExactimation(any(),any(),
                 any(),any(),any(),any(),any(),any());
 
         EthModule eth = new EthModule(
@@ -252,7 +255,6 @@ public class EthModuleTest {
                 blockchain,
                 mockTransactionPool,
                 executor ,
-                null,
                 null,
                 null,
                 null,

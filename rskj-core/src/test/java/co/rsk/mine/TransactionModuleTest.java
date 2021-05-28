@@ -29,7 +29,6 @@ import co.rsk.db.StateRootHandler;
 import co.rsk.net.TransactionGateway;
 import co.rsk.peg.BridgeSupportFactory;
 import co.rsk.peg.RepositoryBtcBlockStoreWithCache;
-import co.rsk.peg.performance.PrecompiledContractPerformanceTestCase;
 import co.rsk.rpc.ExecutionBlockRetriever;
 import co.rsk.rpc.Web3RskImpl;
 import co.rsk.rpc.modules.debug.DebugModule;
@@ -74,13 +73,13 @@ import org.ethereum.vm.PrecompiledContracts;
 import org.ethereum.vm.program.invoke.ProgramInvokeFactoryImpl;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.math.BigInteger;
 import java.time.Clock;
 import java.util.HashMap;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.mockito.Mockito.mock;
 
 public class TransactionModuleTest {
     private final TestSystemProperties config = new TestSystemProperties();
@@ -234,7 +233,7 @@ public class TransactionModuleTest {
     @Test
     public void testGasEstimation() {
         World world = new World();
-        BlockChainImpl blockchain = world.getBlockChain();
+        Blockchain blockchain = world.getBlockChain();
 
         TrieStore trieStore = world.getTrieStore();
 
@@ -242,20 +241,43 @@ public class TransactionModuleTest {
         RepositorySnapshot repository = repositoryLocator.snapshotAt(blockchain.getBestBlock().getHeader());
 
         BlockStore blockStore = world.getBlockStore();
+        BlockTxSignatureCache blockTxSignatureCache = world.getBlockTxSignatureCache();
+        ReceivedTxSignatureCache receivedTxSignatureCache = world.getReceivedTxSignatureCache();
 
-        TransactionPool transactionPool = new TransactionPoolImpl(config, repositoryLocator, blockStore, blockFactory, null, buildTransactionExecutorFactory(blockStore, null), 10, 100);
+        TransactionExecutorFactory transactionExecutorFactory = buildTransactionExecutionFactoryWithProgramInvokeFactory(blockStore, null, blockTxSignatureCache);
+        TransactionPool transactionPool = new TransactionPoolImpl(
+                config,
+                repositoryLocator,
+                blockStore,
+                blockFactory,
+                null,
+                transactionExecutorFactory,
+                receivedTxSignatureCache,
+                10,
+                100
+        );
+        TransactionGateway transactionGateway = new TransactionGateway(new SimpleChannelManager(), transactionPool);
 
-        Web3Impl web3 = createEnvironment(blockchain, null, trieStore, transactionPool, blockStore, true);
+        Web3Impl web3 = createEnvironmentGasExactimation(
+                blockchain,
+                trieStore,
+                transactionPool,
+                blockStore,
+                transactionGateway,
+                transactionExecutorFactory
+        );
+
         RskAddress srcAddr = new RskAddress(ECKey.fromPrivate(Keccak256Helper.keccak256("cow".getBytes())).getAddress());
 
         // Create the transaction that creates the destination contract
-        String tx = sendContractCreationTransaction(srcAddr, web3, repository);
-        // Compute contract destination address
+        sendContractCreationTransaction(srcAddr, web3, repository);
 
+        // Compute contract destination address
         BigInteger nonce = repository.getAccountState(srcAddr).getNonce();
         RskAddress contractAddress = new RskAddress(HashUtil.calcNewAddr(srcAddr.getBytes(), nonce.toByteArray()));
         int gasLimit = 5000000; // start with 5M
         int consumed = checkEstimateGas(callCallWithValue, 33557,gasLimit,srcAddr,contractAddress,web3, repository);
+
         // Now that I know the estimation, call again using the estimated value
         // it should not fail. We set the gasLimit to the expected value plus 1 to
         // differentiate between OOG and success.
@@ -272,7 +294,7 @@ public class TransactionModuleTest {
     // We check that the transaction does not fail!
     // This is clearly missing for estimateGas. It should return a tuple
     // (success,gasConsumed)
-    public int  checkEstimateGas(int method,int expectedValue,int gasLimit,
+    public int checkEstimateGas(int method,int expectedValue,int gasLimit,
                                  RskAddress srcAddr,RskAddress contractAddress,Web3Impl web3,RepositorySnapshot repository) {
         // If expected value given is the gasLimit we must fail because estimateGas cannot
         // differentiate between transaction failure (OOG) and success.
@@ -286,23 +308,6 @@ public class TransactionModuleTest {
         Assert.assertNotEquals(gasReturnedInt,gasLimit);
         Assert.assertEquals(gasReturnedInt, expectedValue);
         return gasReturnedInt;
-    }
-
-    private String getGasEstimationTransactionRawData(Web3Impl web3,int gasLimit) {
-        Account sender = new AccountBuilder().name("cow").build();
-        Account receiver = new AccountBuilder().name("addr2").build();
-
-        Transaction tx = new TransactionBuilder()
-                .sender(sender)
-                .receiver(receiver)
-                .gasPrice(BigInteger.valueOf(8))
-                .gasLimit(BigInteger.valueOf(gasLimit))
-                .value(BigInteger.valueOf(7))
-                .nonce(0)
-                .build();
-
-        String rawData = Hex.toHexString(tx.getEncoded());
-        return rawData;
     }
 
     private String sendRawTransaction(Web3Impl web3) {
@@ -478,13 +483,9 @@ public class TransactionModuleTest {
                                        boolean mineInstant,
                                        BlockTxSignatureCache signatureCache,
                                        TransactionGateway transactionGateway) {
-        StateRootHandler stateRootHandler = new StateRootHandler(
-                config.getActivationConfig(),
-                new TrieConverter(),
-                new HashMapDB(),
-                new HashMap<>()
-        );
-        return createEnvironment(blockchain,
+        StateRootHandler stateRootHandler = createStateRootHandler();
+        return createEnvironment(
+                blockchain,
                 new MiningMainchainViewImpl(blockStore, 1),
                 receiptStore,
                 transactionPool,
@@ -496,7 +497,61 @@ public class TransactionModuleTest {
                 transactionGateway);
     }
 
-    private Web3Impl createEnvironment(Blockchain blockchain, MiningMainchainView mainchainView, ReceiptStore receiptStore, TransactionPool transactionPool, BlockStore blockStore, boolean mineInstant, StateRootHandler stateRootHandler, RepositoryLocator repositoryLocator, BlockTxSignatureCache signatureCache, TransactionGateway transactionGateway) {
+    private Web3Impl createEnvironment(Blockchain blockchain,
+                                       MiningMainchainView mainchainView,
+                                       ReceiptStore receiptStore,
+                                       TransactionPool transactionPool,
+                                       BlockStore blockStore,
+                                       boolean mineInstant,
+                                       StateRootHandler stateRootHandler,
+                                       RepositoryLocator repositoryLocator,
+                                       BlockTxSignatureCache signatureCache,
+                                       TransactionGateway transactionGateway) {
+        return internalCreateEnvironment(
+                blockchain,
+                mainchainView,
+                receiptStore,
+                transactionPool,
+                blockStore,
+                mineInstant,
+                stateRootHandler,
+                repositoryLocator,
+                transactionGateway,
+                buildTransactionExecutorFactory(blockStore, receiptStore, signatureCache)
+        );
+    }
+
+    private Web3Impl createEnvironmentGasExactimation(Blockchain blockchain,
+                                                      TrieStore store,
+                                                      TransactionPool transactionPool,
+                                                      BlockStore blockStore,
+                                                      TransactionGateway transactionGateway,
+                                                      TransactionExecutorFactory transactionExecutorFactory){
+        StateRootHandler stateRootHandler = createStateRootHandler();
+        return internalCreateEnvironment(
+                blockchain,
+                new MiningMainchainViewImpl(blockStore, 1),
+                null,
+                transactionPool,
+                blockStore,
+                true,
+                stateRootHandler,
+                new RepositoryLocator(store, stateRootHandler),
+                transactionGateway,
+                transactionExecutorFactory
+        );
+    }
+
+    private Web3Impl internalCreateEnvironment(Blockchain blockchain,
+                                               MiningMainchainView mainchainView,
+                                               ReceiptStore receiptStore,
+                                               TransactionPool transactionPool,
+                                               BlockStore blockStore,
+                                               boolean mineInstant,
+                                               StateRootHandler stateRootHandler,
+                                               RepositoryLocator repositoryLocator,
+                                               TransactionGateway transactionGateway,
+                                               TransactionExecutorFactory transactionExecutorFactory) {
         transactionPool.processBest(blockchain.getBestBlock());
 
         ConfigCapabilities configCapabilities = new SimpleConfigCapabilities();
@@ -518,13 +573,13 @@ public class TransactionModuleTest {
                 blockchain
         );
         MinerClock minerClock = new MinerClock(true, Clock.systemUTC());
-        transactionExecutorFactory = buildTransactionExecutorFactory(blockStore, receiptStore, signatureCache);
+        this.transactionExecutorFactory = transactionExecutorFactory;
         MiningConfig miningConfig = ConfigUtils.getDefaultMiningConfig();
         BlockExecutor blockExecutor = new BlockExecutor(
                 config.getActivationConfig(),
                 repositoryLocator,
                 stateRootHandler,
-                transactionExecutorFactory
+                this.transactionExecutorFactory
         );
 
         MinerServer minerServer = new MinerServerImpl(
@@ -542,7 +597,7 @@ public class TransactionModuleTest {
                         new DifficultyCalculator(config.getActivationConfig(), config.getNetworkConstants()),
                         new GasLimitCalculator(config.getNetworkConstants()),
                         new ForkDetectionDataCalculator(),
-                        Mockito.mock(BlockUnclesValidationRule.class),
+                        mock(BlockUnclesValidationRule.class),
                         minerClock,
                         blockFactory,
                         blockExecutor,
@@ -562,7 +617,7 @@ public class TransactionModuleTest {
 
         ReversibleTransactionExecutor reversibleTransactionExecutor1 = new ReversibleTransactionExecutor(
                 repositoryLocator,
-                transactionExecutorFactory
+                this.transactionExecutorFactory
         );
 
         if (mineInstant) {
@@ -612,19 +667,44 @@ public class TransactionModuleTest {
                 null);
     }
 
+    private StateRootHandler createStateRootHandler() {
+        return new StateRootHandler(
+                config.getActivationConfig(),
+                new TrieConverter(),
+                new HashMapDB(),
+                new HashMap<>()
+        );
+    }
+
     private TransactionExecutorFactory buildTransactionExecutorFactory(BlockStore blockStore, ReceiptStore receiptStore, BlockTxSignatureCache blockTxSignatureCache) {
-        BridgeSupportFactory bridgeSupportFactory = new BridgeSupportFactory(
-                new RepositoryBtcBlockStoreWithCache.Factory(config.getNetworkConstants().getBridgeConstants().getBtcParams()),
-                config.getNetworkConstants().getBridgeConstants(),
-                config.getActivationConfig());
         return new TransactionExecutorFactory(
                 config,
                 blockStore,
                 receiptStore,
                 blockFactory,
                 null,
-                new PrecompiledContracts(config, bridgeSupportFactory),
+                new PrecompiledContracts(config, bridgeSupportFactory()),
                 blockTxSignatureCache
         );
+    }
+
+    private TransactionExecutorFactory buildTransactionExecutionFactoryWithProgramInvokeFactory(BlockStore blockStore, ReceiptStore receiptStore, BlockTxSignatureCache blockTxSignatureCache) {
+        return new TransactionExecutorFactory(
+                config,
+                blockStore,
+                receiptStore,
+                blockFactory,
+                new ProgramInvokeFactoryImpl(),
+                new PrecompiledContracts(config, bridgeSupportFactory()),
+                blockTxSignatureCache
+        );
+    }
+
+    private BridgeSupportFactory bridgeSupportFactory() {
+        BridgeSupportFactory bridgeSupportFactory = new BridgeSupportFactory(
+                new RepositoryBtcBlockStoreWithCache.Factory(config.getNetworkConstants().getBridgeConstants().getBtcParams()),
+                config.getNetworkConstants().getBridgeConstants(),
+                config.getActivationConfig());
+        return bridgeSupportFactory;
     }
 }
